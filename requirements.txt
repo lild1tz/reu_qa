@@ -1,0 +1,8 @@
+fastapi
+pydantic
+langchain_community
+langchain_openai
+aiohttp
+beautifulsoup4
+uvicorn
+python-dotenv
