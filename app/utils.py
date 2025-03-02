@@ -62,8 +62,8 @@ def parse_content(html: str, word_limit: int = 350) -> str:
         logger.error(f"Error parsing content: {str(e)}")
         return ""
 
-async def is_relevant_to_itmo(question: str) -> Tuple[bool, str]:
-    prompt = f"""Проанализируй вопрос и определи его отношение к Университету ИТМО. Ответь строго в JSON:
+async def is_relevant_to_reu(question: str) -> Tuple[bool, str]:
+    prompt = f"""Проанализируй вопрос и определи его отношение к Университету РЭУ. Ответь строго в JSON:
 {{
  "relevant": boolean,
  "reason": "краткое объяснение на русском языке"
