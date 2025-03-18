@@ -1,14 +1,13 @@
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import List
 
 # Модель для запроса
 class QueryRequest(BaseModel):
     query: str  # Текстовый запрос пользователя
-    id: int     # Уникальный идентификатор запроса
+
 
 # Модель для ответа
 class ResponseModel(BaseModel):
-    id: int               # Идентификатор запроса
-    answer: Optional[int] # Ответ (число или None)
+    answer: str = 'Данный вопрос не связан с РЭУ' # Ответ
     reasoning: str        # Обоснование выбора ответа
-    sources: List[str]    # Список использованных источников
+    sources: List[str] = []   # Список использованных источников

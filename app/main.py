@@ -1,53 +1,76 @@
-from fastapi import FastAPI, HTTPException 
-from app.models import QueryRequest, ResponseModel 
-from app.config import Config 
+import os
+import subprocess
+import threading
+from fastapi import FastAPI
+from fastapi.responses import RedirectResponse
+from langchain_community.utilities import GoogleSerperAPIWrapper
+from langchain_openai import ChatOpenAI
+from app.models import QueryRequest, ResponseModel
+from app.config import Config
+from app.prompts import (
+    prompt_template_relevant_to_reu, output_parser_relevant_to_reu,
+    prompt_template_final, output_parser_final
+    )
 from app.utils import (
-    is_relevant_to_reu,  # Проверка релевантности запроса к рэу
-    process_question_options,  # Обработка вопроса и извлечение вариантов ответа
-    process_search_results,  # Получение контента с первых трёх ссылок
-    generate_llm_response,  # Генерация ответа с помощью LLM
-    summarize_contents  # Суммаризация контента
+    relevant_to_reu, 
+    general_output,
+    search_info
 )
 
-# Создание экземпляра FastAPI 
+search = GoogleSerperAPIWrapper(serper_api_key=Config.SERPER_API_KEY)
+llm = ChatOpenAI(
+    temperature=0.0,
+    model=Config.OPENAI_MODEL_NAME,
+    openai_api_key=Config.OPENAI_API_KEY,
+    base_url=Config.OPENAI_BASE_URL
+)
+
 app = FastAPI()
 
-# Обработка POST-запроса на эндпоинт /api/request
+# 🔹 Запускаем Streamlit в фоновом потоке
+def run_streamlit():
+    os.system("streamlit run frontend/frontend.py --server.port 8501 --server.headless true")
+
+threading.Thread(target=run_streamlit, daemon=True).start()
+
+@app.get("/")
+async def redirect_to_frontend():
+    """ Перенаправляем пользователя сразу в Streamlit-интерфейс """
+    return RedirectResponse(url="http://localhost:8501")
+
 @app.post("/api/request")
 async def handle_request(request: QueryRequest) -> ResponseModel:
-    # 1. Проверяем, относится ли вопрос к рэу
-    relevant, reason = await is_relevant_to_reu(request.query)
+    question = request.query
+    relevant, reasoning = await relevant_to_reu(
+        llm=llm, 
+        question=question,
+        promt_template=prompt_template_relevant_to_reu,
+        output_parser=output_parser_relevant_to_reu
+    )
+
     if not relevant:
         return ResponseModel(
-            id=request.id,
-            answer=None,
-            reasoning=reason + f' Ответ сгенерирован моделью {Config.OPENAI_MODEL_NAME}',
+            answer="Данный вопрос не связан с РЭУ",
+            reasoning=reasoning,
             sources=[]
         )
-    # 2. Извлекаем варианты ответа из запроса
-    processed_query, options = await process_question_options(request.query)
-    # 3. Получаем контент с первых трёх ссылок
-    context, sources = await process_search_results(processed_query)
-    # 4. Если вариантов ответа нет – возвращаем суммаризацию контента
-    if len(options) == 0:
-        summary = await summarize_contents(context)
-        return ResponseModel(
-            id=request.id,
-            answer=None,
-            reasoning=summary + f' Ответ сгенерирован моделью {Config.OPENAI_MODEL_NAME}',
-            sources=sources[:3]
-        )
-    # 5. Если варианты есть – генерируем ответ через LLM
-    response = await generate_llm_response(
-        query=processed_query,
-        context='\n'.join(context),
-        options=options
+
+    search_results = await search_info(search=search, question=question, top_sites=5)
+    context = '\n'.join(search_results[0]) if search_results[0] else "Контекст отсутствует."
+    links = search_results[1] if search_results[1] else []
+
+    answer, reasoning = await general_output(
+        llm=llm,
+        question=question,
+        context=context,
+        promt_template=prompt_template_final,
+        output_parser=output_parser_final
     )
+
     return ResponseModel(
-        id=request.id,
-        answer=response['answer'],
-        reasoning=response['reasoning'] + f' Ответ сгенерирован моделью {Config.OPENAI_MODEL_NAME}',
-        sources=sources[:3]
+        answer=answer,
+        reasoning=reasoning,
+        sources=links
     )
 
 if __name__ == "__main__":
