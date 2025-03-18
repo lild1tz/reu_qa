@@ -1,5 +1,4 @@
 import os
-import subprocess
 import threading
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
@@ -27,7 +26,6 @@ llm = ChatOpenAI(
 
 app = FastAPI()
 
-# 🔹 Запускаем Streamlit в фоновом потоке
 def run_streamlit():
     os.system("streamlit run frontend/frontend.py --server.port 8501 --server.headless true")
 

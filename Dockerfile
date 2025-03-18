@@ -20,4 +20,4 @@ ENV PYTHONPATH="/app"
 EXPOSE 8000 8501
 
 # Запускаем и FastAPI, и Streamlit в одном контейнере
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port 8000 & streamlit run app/frontend/frontend.py --server.port 8501 --server.headless true"]
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port 8000 & streamlit run app/frontend.py --server.port 8501 --server.headless true"]

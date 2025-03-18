@@ -5,9 +5,9 @@ services:
     build: .
     container_name: reu_qa_service
     ports:
-      - "8000:8000"  # FastAPI
-      - "8501:8501"  # Streamlit
+      - "8000:8000"  # FastAPI API
+      - "8501:8501"  # Streamlit UI
     env_file:
       - .env
     volumes:
-      - .:/app
+      - .:/app  # Монтируем проект внутрь контейнера

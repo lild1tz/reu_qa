@@ -61,6 +61,7 @@ async def general_output(llm: ChatOpenAI, question: str, context:str, promt_temp
     return (output_dict['answer'], output_dict['reasoning'])
 
 async def search_info(search: GoogleSerperAPIWrapper, question: str, top_sites: int = 5) -> Tuple[List[str], List[str]]:
+    """Поиск информации по запросу"""
     query = f"{question.rstrip('?')} Университет РЭУ им. Плеханова"
     search_results = await asyncio.to_thread(search.results, query)
     links = list({res['link'] for res in search_results.get('organic', [])[:top_sites] if 'link' in res})
